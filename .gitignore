@@ -5,3 +5,6 @@ config.js
 
 # browserify bundles
 *-bundle.js
+
+# certs
+ssl/
