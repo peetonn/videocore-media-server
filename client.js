@@ -8,6 +8,7 @@ const hostname = window.location.hostname;
 let device;
 let socket;
 let producer;
+let producerAudio;
 
 const $ = document.querySelector.bind(document);
 const $fsPublish = $('#fs_publish');
@@ -16,30 +17,49 @@ const $btnConnect = $('#btn_connect');
 const $btnWebcam = $('#btn_webcam');
 const $btnScreen = $('#btn_screen');
 const $btnSubscribe = $('#btn_subscribe');
-const $chkSimulcast = $('#chk_simulcast');
+// const $chkSimulcast = $('#chk_simulcast');
 const $txtConnection = $('#connection_status');
 const $txtWebcam = $('#webcam_status');
 const $txtScreen = $('#screen_status');
 const $txtSubscription = $('#sub_status');
 let $txtPublish;
 
-$btnConnect.addEventListener('click', connect);
+const $audioInputSelect = $('#audioSource');
+const $audioOutputSelect = $('#audioOutput');
+const $videoSelect = $('#videoSource');
+
+// $btnConnect.addEventListener('click', connect);
 $btnWebcam.addEventListener('click', publish);
 $btnScreen.addEventListener('click', publish);
-$btnSubscribe.addEventListener('click', subscribe);
+// $btnSubscribe.addEventListener('click', subscribe);
 
 if (typeof navigator.mediaDevices.getDisplayMedia === 'undefined') {
   $txtScreen.innerHTML = 'Not supported';
   $btnScreen.disabled = true;
 }
 
+// run "on-page-load" routines
+connect();
+
+navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+
+// declarations
+
 async function connect() {
-  $btnConnect.disabled = true;
+  // $btnConnect.disabled = true;
   $txtConnection.innerHTML = 'Connecting...';
+
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+  const q = urlParams.toString();
+
+  console.log('my query', q);
 
   const opts = {
     path: '/server',
     transports: ['websocket'],
+    reconnectionDelayMax: 10000,
+    query: q
   };
 
   const serverUrl = `https://${hostname}:${config.listenPort}`;
@@ -47,9 +67,9 @@ async function connect() {
   socket.request = socketPromise(socket);
 
   socket.on('connect', async () => {
-    $txtConnection.innerHTML = 'Connected';
+    // $txtConnection.innerHTML = 'Connected';
     $fsPublish.disabled = false;
-    $fsSubscribe.disabled = false;
+    // $fsSubscribe.disabled = false;
 
     const data = await socket.request('getRouterRtpCapabilities');
     await loadDevice(data);
@@ -57,19 +77,32 @@ async function connect() {
 
   socket.on('disconnect', () => {
     $txtConnection.innerHTML = 'Disconnected';
-    $btnConnect.disabled = false;
-    $fsPublish.disabled = true;
-    $fsSubscribe.disabled = true;
+    // $btnConnect.disabled = false;
+    // $fsPublish.disabled = true;
+    // $fsSubscribe.disabled = true;
   });
 
   socket.on('connect_error', (error) => {
     console.error('could not connect to %s%s (%s)', serverUrl, opts.path, error.message);
     $txtConnection.innerHTML = 'Connection failed';
-    $btnConnect.disabled = false;
+    // $btnConnect.disabled = false;
   });
 
   socket.on('newProducer', () => {
-    $fsSubscribe.disabled = false;
+    // $fsSubscribe.disabled = false;
+  });
+
+  socket.on('admit', (name, id) => {
+     console.log('admitted', name, id);
+     $txtConnection.innerHTML = 'Connected as '+name+' (id '+id+')';
+  });
+
+  socket.on('newClient', (name, id) => {
+      console.log('new client', name, id);
+  });
+
+  socket.on('clientDisconnected', (id) => {
+     console.log('client disconnected', id);
   });
 }
 
@@ -106,6 +139,9 @@ async function publish(e) {
 
   transport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
     try {
+
+        console.log('produce', kind);
+
       const { id } = await socket.request('produce', {
         transportId: transport.id,
         kind,
@@ -146,9 +182,11 @@ async function publish(e) {
   let stream;
   try {
     stream = await getUserMedia(transport, isWebcam);
-    const track = stream.getVideoTracks()[0];
+    let track = stream.getVideoTracks()[0];
     const params = { track };
-    if ($chkSimulcast.checked) {
+
+    // if ($chkSimulcast.checked)
+    { // setup simulcast
       params.encodings = [
         { maxBitrate: 100000 },
         { maxBitrate: 300000 },
@@ -158,8 +196,14 @@ async function publish(e) {
         videoGoogleStartBitrate : 1000
       };
     }
+
     producer = await transport.produce(params);
+    track = stream.getAudioTracks()[0];
+
+    const audioParams = { track };
+    producerAudio = await transport.produce(audioParams);
   } catch (err) {
+      console.log('failed to create producer', err);
     $txtPublish.innerHTML = 'failed';
   }
 }
@@ -170,12 +214,33 @@ async function getUserMedia(transport, isWebcam) {
     return;
   }
 
+  // if (typeof stream !== 'undefined') 
+  //     stream.getTracks().forEach(track => {
+  //       track.stop();
+  //     });
+
   let stream;
+
   try {
+      const audioSource = $audioInputSelect.value;
+      const videoSource = $videoSelect.value;
+      const constraints = isWebcam ? {
+          audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
+          video: {deviceId: videoSource ? {exact: videoSource} : undefined}
+      } :
+      {
+          audio: {deviceId: audioSource ? {exact: audioSource} : undefined},
+          video: true
+      };
+
     stream = isWebcam ?
-      await navigator.mediaDevices.getUserMedia({ video: true }) :
-      await navigator.mediaDevices.getDisplayMedia({ video: true });
-  } catch (err) {
+      await navigator.mediaDevices.getUserMedia(constraints) :
+      await navigator.mediaDevices.getDisplayMedia(constraints);
+
+    // navigator.mediaDevices.enumerateDevices();
+    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+  }
+  catch (err) {
     console.error('getUserMedia() failed:', err.message);
     throw err;
   }
@@ -209,6 +274,8 @@ async function subscribe() {
         break;
 
       case 'connected':
+        console.log('connected!');
+
         document.querySelector('#remote_video').srcObject = await stream;
         await socket.request('resume');
         $txtSubscription.innerHTML = 'subscribed';
@@ -221,16 +288,32 @@ async function subscribe() {
         $fsSubscribe.disabled = false;
         break;
 
-      default: break;
+      default:
+        console.log('transport state ', state);
+      break;
     }
   });
 
-  const stream = consume(transport);
+  const stream = makeMediaStream(transport);
 }
 
-async function consume(transport) {
+async function makeMediaStream(transport) {
+    let videoTrack = await consume(transport, 'video');
+    let audioTrack = await consume(transport, 'audio');
+
+    const stream = new MediaStream();
+    stream.addTrack(videoTrack);
+    stream.addTrack(audioTrack);
+
+    return stream;
+}
+
+async function consume(transport, mediaType) {
   const { rtpCapabilities } = device;
-  const data = await socket.request('consume', { rtpCapabilities });
+  const data = await socket.request((mediaType == 'video' ? 'consume' : 'consumeAudio'), { rtpCapabilities });
+
+  console.log('data on consume reply. media type', mediaType, data);
+
   const {
     producerId,
     id,
@@ -246,7 +329,68 @@ async function consume(transport) {
     rtpParameters,
     codecOptions,
   });
-  const stream = new MediaStream();
-  stream.addTrack(consumer.track);
-  return stream;
+
+  // let stream;
+  // if (!stream)
+  // {
+  //   console.log('create new media stream');
+  //   stream = new MediaStream();
+  // }
+  //
+  // console.log('add track to stream', consumer.track);
+  //
+  // stream.addTrack(consumer.track);
+
+  console.log('return track', consumer.track);
+
+  return consumer.track;
+}
+
+function gotDevices(deviceInfos) {
+  const selectors = [$audioInputSelect, $audioOutputSelect, $videoSelect];
+  // Handles being called several times to update labels. Preserve values.
+  const values = selectors.map(select => select ? select.value : null);
+  selectors.forEach(select => {
+    while (select && select.firstChild) {
+      select.removeChild(select.firstChild);
+    }
+  });
+
+  console.log('loaded devices GO', deviceInfos);
+
+  for (let i = 0; i !== deviceInfos.length; ++i) {
+    const deviceInfo = deviceInfos[i];
+    const option = document.createElement('option');
+    option.value = deviceInfo.deviceId;
+    if (deviceInfo.kind === 'audioinput') {
+        if ($audioInputSelect)
+        {
+            option.text = deviceInfo.label || `microphone ${$audioInputSelect.length + 1}`;
+            $audioInputSelect.appendChild(option);
+        }
+    } else if (deviceInfo.kind === 'audiooutput') {
+        if ($audioOutputSelect)
+        {
+            option.text = deviceInfo.label || `speaker ${$audioOutputSelect.length + 1}`;
+            $audioOutputSelect.appendChild(option);
+        }
+    } else if (deviceInfo.kind === 'videoinput') {
+        if ($videoSelect)
+        {
+            option.text = deviceInfo.label || `camera ${$videoSelect.length + 1}`;
+            $videoSelect.appendChild(option);
+        }
+    } else {
+      console.log('Some other kind of source/device: ', deviceInfo);
+    }
+  }
+  selectors.forEach((select, selectorIndex) => {
+    if (select && Array.prototype.slice.call(select.childNodes).some(n => n.value === values[selectorIndex])) {
+        select.value = values[selectorIndex];
+    }
+  });
+}
+
+function handleError(error) {
+  console.log('navigator.MediaDevices.getUserMedia error: ', error.message, error.name);
 }

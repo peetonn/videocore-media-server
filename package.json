@@ -1,19 +1,22 @@
 {
-  "name": "mediasoup-sample-app",
-  "version": "1.2.2",
-  "description": "Mediasoup Sample App",
+  "name": "videocore-media-server",
+  "version": "0.0.1",
+  "description": "VideoCore Media Server",
   "main": "server.js",
   "scripts": {
-    "start": "browserify client.js -o app-bundle.js; node server.js"
+    "start": "browserify client.js -o app-bundle.js; browserify producer.js -o producer-bundle.js; browserify consumer.js -o consumer-bundle.js; node server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ejs": "^3.1.6",
     "express": "^4.16.4",
-    "mediasoup": "3",
+    "js-cookie": "^2.2.1",
+    "mediasoup": "^3.6.31",
     "mediasoup-client": "3",
     "socket.io": "^2.2.0",
-    "socket.io-client": "^2.2.0"
+    "socket.io-client": "^2.2.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "requirejs": "^2.3.6"

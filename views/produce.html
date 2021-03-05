@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="mediasoup.png" />
+  <title>VideoCore Producer</title>
+</head>
+<style>
+  body {
+    font: .9rem arial, serif;
+  }
+  table {
+    width: 100%;
+    max-width: 800px;
+  }
+  table td {
+    width: 33.33%;
+    vertical-align: top;
+  }
+  fieldset {
+    min-height: 100%;
+    border: 1px solid silver;
+    padding: 10px;
+  }
+  button {
+    padding: 5px;
+    margin: 5px;
+  }
+  video {
+    width: 100%;
+  }
+  span {
+    font-family: monospace;
+  }
+
+  div.select {
+    display: inline-block;
+    margin: 0 0 1em 0;
+  }
+
+  p.small {
+    font-size: 0.7em;
+  }
+
+  label {
+    width: 12em;
+    display: inline-block;
+  }
+</style>
+<body>
+   <div><span id="connection_status"></span></div>
+  <br/>
+  <table>
+    <tr>
+      <td>
+        <fieldset id="fs_publish" disabled>
+            <div class="select">
+               <label for="audioSource">Audio input source: </label><select id="audioSource"></select>
+           </div>
+           <div class="select">
+               <label for="videoSource">Video source: </label><select id="videoSource"></select>
+           </div>
+          <div>
+            <button id="btn_webcam">Start Webcam</button>
+            <span id="webcam_status"></span>
+          </div>
+        </fieldset>
+      </td>
+    </tr>
+  </table>
+  <br>
+  <table>
+    <tr>
+      <td>
+        <video id="local_video" autoplay playsinline muted></video>
+      </td>
+    </tr>
+  </table>
+</body>
+<script>
+  // window.localStorage.setItem('debug', 'mediasoup-client:WARN* mediasoup-client:ERROR*');
+  window.localStorage.setItem('debug', 'mediasoup-client:*');
+</script>
+<script type="text/javascript" src="/producer-bundle.js"></script>
+</html>

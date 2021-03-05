@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="mediasoup.png" />
+  <title>Mediasoup Sample App</title>
+</head>
+<style>
+  body {
+    font: .9rem arial, serif;
+  }
+  table {
+    width: 100%;
+    max-width: 800px;
+  }
+  table td {
+    width: 33.33%;
+    vertical-align: top;
+  }
+  fieldset {
+    min-height: 100%;
+    border: 1px solid silver;
+    padding: 10px;
+  }
+  button {
+    padding: 5px;
+    margin: 5px;
+  }
+  video {
+    width: 100%;
+  }
+  span {
+    font-family: monospace;
+  }
+</style>
+<body>
+    <div><span id="connection_status"></span></div>
+    <div><span id="sub_status"></span></div>
+    <br>
+  <table>
+      <tr>
+          <td>
+            <fieldset id="fs_subscribe">
+              <div><button id="btn_subscribe">Consume</button> <span id="sub_status"></span></div>
+            </fieldset>
+          </td>
+      </tr>
+    <tr>
+      <td>
+        <video id="remote_video" autoplay playsinline></video>
+      </td>
+    </tr>
+  </table>
+</body>
+<script>
+  // window.localStorage.setItem('debug', 'mediasoup-client:WARN* mediasoup-client:ERROR*');
+  window.localStorage.setItem('debug', 'mediasoup-client:*');
+</script>
+<script>
+var clientId = "<%= clientId %>";
+</script>
+<script type="text/javascript" src="/consumer-bundle.js"></script>
+</html>
