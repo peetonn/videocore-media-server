@@ -121,7 +121,7 @@ class RtcClient {
 
           this.producers_.push(producer);
           // inform clients about new producer
-          this.socket_.broadcast.emit('newProducer', this.clientId_, producer.id);
+          this.socket_.broadcast.emit('newProducer', { clientId: this.clientId_, producerId: producer.id } );
           console.log('new producer', producer.kind, producer.id, this.clientName_, this.clientId_);
 
           producer.on("transportclose", () =>
@@ -290,8 +290,7 @@ async function runExpressApp() {
   });
 }
 
-function makeClientConsumeUrl(c, streams)
-{
+function makeClientConsumeUrl(c, streams) {
     const { listenIp, listenPort } = config;
     if (streams)
         return `https://${listenIp}:${listenPort}/consume/${c.clientId_}/?s=${streams.join('&s=')}`;
@@ -345,8 +344,8 @@ async function runSocketServer() {
 
     console.log('CONNECTED', clientName, client.clientId_);
 
-    socket.emit('admit', client.clientName_, client.clientId_);
-    socket.broadcast.emit('newClient', client.clientName_, client.clientId_);
+    socket.emit('admit', { name: client.clientName_, id: client.clientId_ });
+    socket.broadcast.emit('newClient', { name: client.clientName_, id: client.clientId_ });
   });
 }
 
@@ -397,8 +396,7 @@ async function createWebRtcTransport() {
   };
 }
 
-function getProducer(streamId)
-{
+function getProducer(streamId) {
     for (var cId in clientRoster)
     {
         let producer = clientRoster[cId].producers_.find(p => p.id === streamId);
@@ -409,8 +407,7 @@ function getProducer(streamId)
     return null;
 }
 
-function getConsumer(streamId)
-{
+function getConsumer(streamId) {
     for (var cId in clientRoster)
     {
         let consumer = clientRoster[cId].consumers_.find(c => c.id === streamId);

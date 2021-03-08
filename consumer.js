@@ -63,7 +63,8 @@ async function connect() {
     // TODO: cleanup here
   });
 
-  socket.on('admit', (name, id) => {
+  socket.on('admit', (d) => {
+     const {name , id} = d;
      console.log('admitted', name, id);
      myId = id;
      $txtConnection.innerHTML = 'Connected as '+name+' (id '+id+')';

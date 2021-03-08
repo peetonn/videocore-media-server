@@ -75,7 +75,8 @@ async function connect() {
     $txtConnection.innerHTML = 'Connection failed';
   });
 
-  socket.on('admit', (name, id) => {
+  socket.on('admit', (d) => {
+     const {name , id} = d;
      console.log('admitted', name, id);
      $txtConnection.innerHTML = 'Connected as '+name+' (id '+id+')';
   });
