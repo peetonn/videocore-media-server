@@ -82,6 +82,9 @@ class RtcClient {
 
         socket.on('createProducerTransport', async (data, callback) => {
           try {
+            if (this.producerTransport_ !== null)
+              this.closeTransport('producer');
+
             const { transport, params } = await createWebRtcTransport();
             this.producerTransport_ = transport;
             this.producers_ = [];
@@ -94,6 +97,9 @@ class RtcClient {
 
         socket.on('createConsumerTransport', async (data, callback) => {
           try {
+            if (this.consumerTransport_ !== null)
+              this.closeTransport('consumer');
+
             const { transport, params } = await createWebRtcTransport();
             this.consumerTransport_ = transport;
             this.consumers_ = [];
@@ -136,6 +142,13 @@ class RtcClient {
           });
         });
 
+        socket.on('transportClose', (data) => {
+            const { kind } = data;
+            console.log(`notified transport closes for ${this.clientId_} - ${kind}`);
+
+            this.closeTransport(kind);
+        });
+
         socket.on('consume', async (data, callback) => {
           let producer = getProducer(data.streamId);
           if (producer)
@@ -170,10 +183,32 @@ class RtcClient {
         });
     }
 
-    // TODO: shut down all mediasoup objects properly
+    closeTransport(kind) {
+        if (this.producerTransport_ !== null && kind === 'producer')
+        {
+            console.log(`closing ${this.producers_.length} producers`);
+            this.producerTransport_.close();
+            this.producers_.forEach(p => p.close());
+        }
+
+        if (this.consumerTransport_ !== null && kind === 'consumer')
+        {
+            console.log(`closing ${this.consumers_.length} consumer`);
+            this.consumerTransport_.close();
+            this.consumers_.forEach(c => c.close());
+        }
+    }
+
     cleanup() {
         if (this.clientId_ in clientRoster)
             delete clientRoster[this.clientId_];
+
+        this.producers_.forEach(p => p.close());
+        this.consumers_.forEach(c => c.close());
+        if (this.producerTransport_)
+            this.producerTransport_.close();
+        if (this.consumerTransport_)
+            this.consumerTransport_.close();
     }
 
     async createConsumer(producer, rtpCapabilities) {
@@ -201,12 +236,17 @@ class RtcClient {
       }
 
       if (consumer.type === 'simulcast') {
-        console.log('set simulcast consumer');
         await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
       }
 
       this.consumers_.push(consumer);
       console.log(`add consumer ${consumer.id} for ${this.clientId_}. total ${this.consumers_.length}`);
+
+      consumer.on("producerclose", () =>
+      {
+          console.log(`consumer ${consumer.id} is closed (producer close)`);
+          this.consumers_.splice(this.consumers_.indexOf(consumer));
+      });
 
       return {
         producerId: producer.id,
@@ -273,8 +313,12 @@ async function runExpressApp() {
               'consumeUrl': makeClientConsumeUrl(c),
               'producers': [c.producers_.map(p => ({
                   id: p.id,
-                  type: p.kind,
+                  kind: p.kind,
                   consumeUrl: makeClientConsumeUrl(c, [p.id])})
+              )],
+              'consumers': [c.consumers_.map(c => ({
+                  id: c.id,
+                  kind: c.kind })
               )]
           });
       }
@@ -385,6 +429,8 @@ async function createWebRtcTransport() {
     } catch (error) {
     }
   }
+
+  console.log(`created new transport ${transport.id}`);
   return {
     transport,
     params: {

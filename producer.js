@@ -108,7 +108,7 @@ async function publish(e) {
 
   // check if this is re-publish
   if (typeof transport !== 'undefined' || transport )
-    transport.close();
+      transport.close();
   transport = createTransport(data);
 
   if (typeof stream !== 'undefined' || stream)
