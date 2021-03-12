@@ -1,7 +1,8 @@
-# Mediasoup Sample App
+# VideoCore Media Server
 
-A minimal Client/Server app based on Mediasoup and Socket.io
-
+An [SFU](https://webrtcglossary.com/sfu/) media server + minimalist Web client app based on [Mediasoup](https://mediasoup.org/) and Socket.io.
+Allows connecting clients to produce and consume WebRTC media streams.
+Implements media server protocol for [VideoCore (RTC) plugin](https://github.com/remap/VideoCore).
 
 ## Dependencies
 
