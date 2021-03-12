@@ -6,6 +6,7 @@ const https = require('https');
 const express = require('express');
 const socketIO = require('socket.io');
 const config = require('./config');
+const gfynonce = require('gfynonce');
 
 // Global variables
 let worker;
@@ -265,7 +266,7 @@ class RtcClient {
 	    var rand_first = Math.floor(Math.random()*firstname.length);
 	    var rand_last = Math.floor(Math.random()*lastname.length);
 
-	    return lastname[rand_last] + ' ' + firstname[rand_first];
+	    return gfynonce({ adjectives: 1, separator: ' ' });
     }
 }
 
